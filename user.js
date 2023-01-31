@@ -17,9 +17,11 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=prolific.co
 // @grant        none
 // ==/UserScript==
+const variableDelay = (Math.floor(Math.random() * 11) + 5) * 1000;
 
 //let tokenFrame;
 document.arrive(".help-centre", {onceOnly: true}, function (){
+
 let t = document.getElementsByClassName("nav-link help-centre")[0];
 	if (t)
 	{let e = t.parentNode;
@@ -45,8 +47,8 @@ console.log("tokenFrame1");
     //return new Promise((resolve, reject) => {
         let iframe = document.createElement("iframe");
         iframe.src = "https://app.prolific.co/submissions/1";
-        iframe.style.width = "80px";
-        iframe.style.height = "240px";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
         iframe.id = "frame";
         let summaryDiv = document.querySelector(".summary");
         summaryDiv.appendChild(iframe);
@@ -93,22 +95,46 @@ console.log("tokenFrame3");
 }})
 
 function getIT(token, iframe) {
+  let topPage = document.querySelectorAll('a.page-link');
+  let maxPages = topPage[12].innerText -1;
+    console.log(maxPages)
+  let currentPage;
   console.log("fetch1");
-    const response = fetch(
-      "https://internal-api.prolific.co/api/v1/submissions/?participant=59bd5ee0b7a3f000017d5c60&page=2&page_size=100",
-      {
-        method: "GET",
-        headers: {
-          Authorization: "Bearer " + token,
-          Accept: "application/json, text/plain,  */*",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Accept-Language": "en-US,en;q=0.9",
-          Referer: "https://app.prolific.co/",
-          Origin: "https://app.prolific.co"
+ for (currentPage = 1; currentPage <= maxPages; ) {
+  let variableDelay = (Math.floor(Math.random() * 11) + 5) * 1000;
+  (function (currentPage) {
+    setTimeout(() => {
+      const response = fetch(
+        "https://internal-api.prolific.co/api/v1/submissions/?participant=59bd5ee0b7a3f000017d5c60&page=" +
+        currentPage +
+        "&page_size=20",
+        {
+          method: "GET",
+          headers: {
+            Authorization: "Bearer " + token,
+            Accept: "application/json, text/plain,  */*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            Referer: "https://app.prolific.co/",
+            Origin: "https://app.prolific.co"
+          }
         }
-      }
-    );
-   response.then(res => res.json()).then(data => {
-  console.log(data);
-});
-  };
+      );
+      response.then(res => res.json()).then(data => {
+        console.log(data);
+      })
+      .catch(error => {
+  console.error(error);
+      console.log(error);
+    if (error.message.includes("The resource requested was not found")) {
+        console.log("catch error");
+     // const newToken = await getToken();
+     //   savedToken = newToken;
+      return
+    }
+    throw error;
+  })
+    }, variableDelay * currentPage);console.log(variableDelay)
+  })(currentPage);
+  currentPage++;
+}}
