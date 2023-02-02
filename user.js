@@ -12,11 +12,12 @@
 // @require      https://code.jquery.com/ui/1.13.1/jquery-ui.min.js
 // @require      https://unpkg.com/dexie/dist/dexie.js
 // @require      https://unpkg.com/ag-grid-community@29.0.0/dist/ag-grid-community.min.js
-// @require      https://unpkg.com/sweetalert/dist/sweetalert.min.js
+// @require      https://cdn.jsdelivr.net/npm/sweetalert2@11
 // @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css
 // @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-apline.css
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=prolific.co
 // @grant        none
+// @unwrap
 // ==/UserScript==
 var db;
 document.arrive(".help-centre",
@@ -38,7 +39,7 @@ document.arrive(".help-centre",
 			e.insertBefore(o, t);
 			document.getElementById("startButton").addEventListener("click", function ()
 			{
-				localStoreGet().then(initDB).then(tokenFrame).then(tokenLogic).catch(function (error)
+             localStoreGet().then(initDB).then(tokenFrame).then(tokenLogic).catch(function (error)
 				{
 					console.error(error);
 				});
@@ -291,13 +292,42 @@ function warningDialog()
 {
 	if (!localStorage.getItem("warningRead"))
 	{
-		swal(
-		{
-			title: "This script is neither supported nor endorsed by Prolific.",
-			text: "The developer of this script has good faith belief that it doesn't degrade the service or give unfair advantage to users. The requests it makes to the server are deliberately rate-limted. If you are not okay with the possible risk, you can uninstall the script. Otherwise, dismiss this dialog and hit the start button in the top bar to begin. You will only see this warning once.",
-			icon: "warning",
-			dangerMode: true,
-			//confirmButtonText: "Ok, got it"
+					Swal.fire({
+  title: "Placeholder Title",
+  text: "Placeholder text content",
+  showCancelButton: true,
+  cancelButtonText: "Dismiss",
+  confirmButtonText: "More Info",
+  dangerMode: true,
+  backdrop: false,
+  allowOutsideClick: false,
+  showClass: {
+    backdrop: 'swal2-noanimation',
+    popup: '',
+    icon: ''
+  },
+  hideClass: {
+    popup: '',
+  },
+}).then(result => {
+  if (result.value) {
+    Swal.fire({
+      title: "Placeholder Title",
+      text: "Placeholder text content for more information.",
+      showCancelButton: false,
+      confirmButtonText: "Dismiss",
+      backdrop: false,
+      dangerMode: true,
+      allowOutsideClick: false,
+      showClass: {
+    backdrop: 'swal2-noanimation',
+    popup: '',
+    icon: ''
+  },
+  hideClass: {
+    popup: '',
+  },});}
+
 		}).then(() =>
 		{
 			localStorage.setItem("warningRead", true);
