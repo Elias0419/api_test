@@ -20,346 +20,421 @@
 // ==/UserScript==
 let running = false;
 let start = false;
-let db;
-
+//let db;
+//**********TODO instituation/researcher*****//
 document.arrive(".help-centre", {
-        onceOnly: true
-    },
+		onceOnly: true
+	},
 
-    function() {
+	function() {
 
-        let t = document.querySelector('.right');
-        if (t) {
+		let t = document.querySelector('.right');
+		if (t) {
 
-            warningDialog()
-            let e = t.parentNode;
-            let o = document.createElement("button");
-            o.style.padding = "12px 20px";
-            o.style.boxShadow = "2px 2px 4px #888888";
-            o.style.borderRadius = "25px";
-            o.style.color = "#207bbc";
-            o.id = "startButton";
-            o.innerHTML = "DATABASE<br>";
-            e.insertAdjacentElement("afterend", o);
-            //  o.addEventListener("click", function(){
-
+			warningDialog()
+			let e = t.parentNode;
+			let o = document.createElement("button");
+			o.style.padding = "12px 20px";
+			o.style.boxShadow = "2px 2px 4px #888888";
+			o.style.borderRadius = "25px";
+			o.style.color = "#207bbc";
+			o.id = "startButton";
+			o.innerHTML = "DATABASE<br>";
+			e.insertAdjacentElement("afterend", o);
 
 
-        }
-    })
+
+
+		}
+	})
 
 
 
 function localStoreGet() {
-    running = true;
-    return new Promise((resolve, reject) => {
-        let userID = localStorage.getItem("userID");
-        if (userID) {
-            getMaxPages(userID);
-            resolve(userID);
-            // return userID;
-        } else {
-            getUserID().then(id => {
-                resolve(id);
-            }).catch(error => {
-                reject(error);
-            });
-        }
-    });
+	running = true;
+	return new Promise((resolve, reject) => {
+		let userID = localStorage.getItem("userID");
+		if (userID) {
+			getMaxPages(userID);
+			resolve(userID);
+
+		} else {
+			getUserID().then(id => {
+				resolve(id);
+			}).catch(error => {
+				reject(error);
+			});
+		}
+	});
 }
 async function getUserID() {
-    console.log("get user id function")
-    const accountIframe = await accountFrame();
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            let userID = accountIframe.contentDocument.querySelector(".prolific-id").innerText;
-            localStorage.setItem("userID", userID);
-            getMaxPages(userID);
-            resolve(userID)
-            //return userID
-        }, 10000);
-    })
+
+	const accountIframe = await accountFrame();
+	return new Promise((resolve, reject) => {
+		setTimeout(() => {
+			let userID = accountIframe.contentDocument.querySelector(".prolific-id").innerText;
+			localStorage.setItem("userID", userID);
+			getMaxPages(userID);
+			resolve(userID)
+			$("#accountFrame").remove();
+
+		}, 10000);
+	})
 }
 
 function accountFrame() {
-    console.log("accountFrame1");
-
-    let accountIframe = document.createElement("iframe");
-    accountIframe.src = "https://app.prolific.co/account/General";
-    accountIframe.style.display = "none";
-    accountIframe.id = "accountFrame";
-    let summaryDiv = document.querySelector(".help-centre");
-    summaryDiv.appendChild(accountIframe);
-    console.log("accountFrame2");
-    return accountIframe;
-} /*TODO close iframe*/
 
 
+	let accountIframe = document.createElement("iframe");
+	accountIframe.src = "https://app.prolific.co/account/General";
+	accountIframe.style.display = "none";
+	accountIframe.id = "accountFrame";
+	let summaryDiv = document.querySelector(".help-centre");
+	summaryDiv.appendChild(accountIframe);
+	console.log("accountFrame2");
+	return accountIframe;
+}
+
+async function initDB(db) {
+	return new Promise((resolve) => {
+
+		var db = new Dexie("submissions");
+		console.log("init db")
+		db.version(1).stores({
+			entries: `
+
+id++,
+reward,
+status,
+study,
+study_code,
+researcher,
+completed_at,
+started_at,
+bonus_payments,
+bonus_currency,
+adjustment_payments,
+adjustment_currency
+
+                `
+		});
+		resolve(db);
+	})
+}
 
 //***********************?//
 async function getMaxPages(userID) {
-    console.log("get maxpages function");
-    const maxPagesIframe = await maxPagesFrame();
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            let topPage = maxPagesIframe.contentDocument.querySelectorAll("a.page-link");
-            console.log("maxpages loop test " + topPage);
-            let maxPages1 = topPage[12].innerText;
-            console.log(maxPages1 + " pages to fetch.");
-            console.log("Press start to begin.");
-            localStorage.setItem("maxPages", maxPages1);
-            tokenLogic(maxPages1, userID);
-            resolve(maxPages1);
-        }, 10000);
-    });
+
+	const maxPagesIframe = await maxPagesFrame();
+	return new Promise((resolve, reject) => {
+		setTimeout(() => {
+			let topPage = maxPagesIframe.contentDocument.querySelectorAll("a.page-link");
+
+			let maxPages1 = topPage[12].innerText;
+			const maxPages = maxPages1 / 5;
+			const maxPagesRounded = Math.ceil(maxPages1 / 5);
+			let timeEstimate = Math.round((maxPages * 15) / 60);
+			$("#dialogStart").button("enable");
+			console.log(" ")
+			console.log(" ")
+			console.log(" ")
+			console.log("Press start to begin");
+			console.log("------------------------------------------")
+			console.log("and it will take about " + timeEstimate + " minutes.")
+
+			console.log(maxPages1 + " pages will be fetched with " + maxPagesRounded + " requests")
+			console.log("------------------------------------------")
+
+			console.log("submission history in batches of 100.")
+			console.log("This program fetches your")
+			console.log("------------------------------------------")
+			localStorage.setItem("maxPages", maxPages1);
+			tokenLogic(maxPages1, userID);
+			resolve(maxPages1);
+			$("#maxPagesFrame").remove();
+
+		}, 10000);
+	});
 }
 
 function maxPagesFrame() {
-    console.log("accountFrame1");
 
-    let maxPagesIFrame = document.createElement("iframe");
-    maxPagesIFrame.src = "https://app.prolific.co/submissions";
-    maxPagesIFrame.style.display = "none";
-    maxPagesIFrame.id = "maxPagesFrame";
-    let summaryDiv = document.querySelector(".help-centre");
-    summaryDiv.appendChild(maxPagesIFrame);
-    console.log("maxpagesFrame2");
-    return maxPagesIFrame;
-} /*TODO close iframe*/
+
+	let maxPagesIFrame = document.createElement("iframe");
+	maxPagesIFrame.src = "https://app.prolific.co/submissions";
+	maxPagesIFrame.style.display = "none";
+	maxPagesIFrame.id = "maxPagesFrame";
+	let summaryDiv = document.querySelector(".help-centre");
+	summaryDiv.appendChild(maxPagesIFrame);
+
+	return maxPagesIFrame;
+}
 
 //*********************//
 
 async function tokenLogic(maxPages1, userID) {
-    console.log("tokenlogic1");
-    const iframe = await tokenFrame();
-    return new Promise((resolve, reject) => {
-        console.log("tokenlogic2");
 
-        var authRequest = null;
 
-        var open = iframe.contentWindow.XMLHttpRequest.prototype.open;
-        iframe.contentWindow.XMLHttpRequest.prototype.open = function() {
-            this.onreadystatechange = () => {
-                authRequest = this;
-            };
+	const iframe = await tokenFrame();
+	return new Promise((resolve, reject) => {
 
-            return open.apply(this, [].slice.call(arguments));
-        };
 
-        var headers = iframe.contentWindow.XMLHttpRequest.prototype.setRequestHeader;
-        iframe.contentWindow.XMLHttpRequest.prototype.setRequestHeader = function() {
-            if (arguments[0] == 'Authorization') {
-                let token = arguments[1].substring(7);
-                console.log("tokenlogic3");
-                console.log(token);
-                localStorage.setItem("token", token);
-                //mainLoop( maxPages1, userID, token );
-                resolve(token);
+		var authRequest = null;
 
-            }
-        };
-    });
+		var open = iframe.contentWindow.XMLHttpRequest.prototype.open;
+		iframe.contentWindow.XMLHttpRequest.prototype.open = function() {
+			this.onreadystatechange = () => {
+				authRequest = this;
+			};
+
+			return open.apply(this, [].slice.call(arguments));
+		};
+
+		var headers = iframe.contentWindow.XMLHttpRequest.prototype.setRequestHeader;
+		iframe.contentWindow.XMLHttpRequest.prototype.setRequestHeader = function() {
+			if (arguments[0] == 'Authorization') {
+				let token = arguments[1].substring(7);
+
+				localStorage.setItem("token", token);
+
+				resolve(token);
+				$("frame").remove();
+
+			}
+		};
+	});
 }
 
 function tokenFrame() {
-    console.log("tokenFrame1");
 
-    let iframe = document.createElement("iframe");
-    iframe.src = "https://app.prolific.co/submissions/1";
-    iframe.style.display = "none";
-    iframe.id = "frame";
-    let summaryDiv = document.querySelector(".help-centre");
-    summaryDiv.appendChild(iframe);
-    console.log("tokenFrame2");
 
-    return iframe;
-    console.log("tokenFrame3");
+	let iframe = document.createElement("iframe");
+	iframe.src = "https://app.prolific.co/submissions/1";
+	iframe.style.display = "none";
+	iframe.id = "frame";
+	let summaryDiv = document.querySelector(".help-centre");
+	summaryDiv.appendChild(iframe);
+
+
+	return iframe;
+
 }
+
+
 
 /********************/
 
-var currentPage = 1
-
-function getPages() {
-    const userID = localStorage.getItem("userID");
-    const maxPages1 = localStorage.getItem("maxPages");
-    const maxPages = maxPages1 / 5;
-    const token = localStorage.getItem("token");
-    console.log("token " + token)
-    console.log("token2 " + token)
-    if (!running) {
-        console.log("canceled");
-        return
-    }
-    if (currentPage <= maxPages) {
-        const response = fetch(
-                "https://internal-api.prolific.co/api/v1/submissions/?participant=" +
-                userID +
-                "&page=" +
-                currentPage +
-                "&page_size=100", {
-                    method: "GET",
-                    headers: {
-                        Authorization: "Bearer " + token,
-                        Accept: "application/json, text/plain,  */*",
-                        "Accept-Encoding": "gzip, deflate, br",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        Referer: "https://app.prolific.co/",
-                        Origin: "https://app.prolific.co"
-                    }
-                }
-            )
-            .then((response) => response.json())
-            .then((data) => {
-                processSubmissions(data, db);
-            })
-            .catch(function(error) {
-                console.error('oshit ', error);
-            })
-    } else {
-        console.log("fetch complete")
-        return
-    }
-    pageDelay()
+var currentPage = 0
+let startTime = new Date();
+async function getPages() {
+	currentPage++
+	// console.log(db+" at main")
+	const userID = localStorage.getItem("userID");
+	const maxPages1 = localStorage.getItem("maxPages");
+	const maxPages = maxPages1 / 5;
+	const token = localStorage.getItem("token");
+	if (currentPage === 1) {
+		console.log("Fetching page " + currentPage);
+	}
+	if (!running) {
+		// console.log("canceled");
+		return
+	}
+	if (currentPage <= maxPages) {
+		const response = fetch(
+				"https://internal-api.prolific.co/api/v1/submissions/?participant=" +
+				userID +
+				"&page=" +
+				currentPage +
+				"&page_size=100", {
+					method: "GET",
+					headers: {
+						Authorization: "Bearer " + token,
+						Accept: "application/json, text/plain,  */*",
+						"Accept-Encoding": "gzip, deflate, br",
+						"Accept-Language": "en-US,en;q=0.9",
+						Referer: "https://app.prolific.co/",
+						Origin: "https://app.prolific.co"
+					}
+				}
+			)
+			.then((response) => response.json())
+			.then((data) => {
+				//console.log(data);
+				processSubmissions(data);
+			})
+			.catch(function(error) {
+				console.error('oshit ', error);
+			})
+	} else {
+		let endTime = new Date();
+		let timeDiff = endTime - startTime;
+		let seconds = Math.round(timeDiff / 1000);
+		let minutes = Math.floor(seconds / 60);
+		seconds = seconds % 60;
+		/*db.entries.count().then(count => {
+		  console.log(count+" entries were added or updated in "+minutes+":"+seconds);
+		});*/
+		console.log("------------------------------------------")
+		console.log("Complete. " + minutes + ":" + seconds)
+		console.log("------------------------------------------")
+		return
+	}
+	pageDelay()
 }
 
 function pageDelay() {
-    setTimeout(() => {
-        currentPage++
-        getPages()
-        console.log("Delayed");
-    }, "15000")
+	setTimeout(() => {
+		if (running) {
+			//currentPage++
+			getPages()
+
+			console.log("Fetching page " + currentPage);
+		}
+	}, "15000")
 }
 
 
-
 document.arrive(".help-centre", {
-        onceOnly: true
-    },
+		onceOnly: true
+	},
 
-    function() {
+	function() {
 
-        let dialogDiv = document.createElement("div");
-        dialogDiv.id = "dialog";
-        document.body.appendChild(dialogDiv);
-        $("head").append(
-            '<link ' +
-            'href="https://code.jquery.com/ui/1.13.2/themes/overcast/jquery-ui.css" ' +
-            'rel="stylesheet" type="text/css">'
-        );
-        $("head").append(
-            '<style type="text/css">' +
-            '#dialog { ' +
-            'margin: 0; padding: 0; border: 0;' +
-            'height:100%; max-height:100%;' +
-            'color:#f00 !important;' +
-            'font: normal 3em "Arial", sans-serif;' +
-            'font-size: 32px;' +
-            'vertical-align: baseline;' +
-            'line-height: 1; }' +
-            '#dialog table { ' +
-            'border-collapse: collapse;' +
-            'border-spacing: 0; }'
-            //+'.ui-dialog-titlebar {display:none}'
-            //+'.ui-dialog-titlebar { font: italic 2em "Open Sans", sans-serif; }'
-            +
-            '</style>'
-        );
-
-
-        var opt = {
-            width: 500,
-            minWidth: 400,
-            minHeight: 400,
-            maxHeight: 400,
-            modal: false,
-            autoOpen: false,
-            overflowY: scroll,
-            title: " ",
-            zIndex: 1,
-            position: {
-                my: "left top",
-                at: "left bottom",
-                of: "#startButton"
-            },
-            buttons: [{
-                    text: "Open Database",
-                    click: function() {
-                        window.open("https://app.prolific.co/st", "_blank")
-                    }
-                },
-                {
-                    text: "Start",
-                    click: function() {
-                        getPages()
-                        initDB()
-                        console.log("Fetching pages...")
-                        console.log("Please wait...")
-
-                    }
-                },
-                {
-                    text: "Stop",
-                    click: function() {
-                        running = false;
-                    }
-                },
-                {
-                    text: "Close",
-                    click: function() {
-                        console.log = console.old;
-                        $(this).dialog("close");
-                    }
-                }
-            ]
-        };
+		let dialogDiv = document.createElement("div");
+		dialogDiv.id = "dialog";
+		document.body.appendChild(dialogDiv);
+		$("head").append(
+			'<link ' +
+			'href="https://code.jquery.com/ui/1.13.2/themes/overcast/jquery-ui.css" ' +
+			'rel="stylesheet" type="text/css">'
+		);
 
 
 
-        $(function() {
-            $("#dialog").dialog(opt);
+		var opt = {
+			width: 700,
+			minWidth: 700,
+			minHeight: 400,
+			maxHeight: 400,
+			modal: false,
+			autoOpen: false,
+			overflowY: scroll,
+			title: " ",
+			zIndex: 1,
 
-            $("#startButton").click(function() {
-                localStoreGet()
-                $("#dialog").dialog("open");
-                console.log("click");
-                //let topPage = document.querySelectorAll('a.page-link');
-                //let maxPages1 = topPage[12].innerText;
-                let logger = document.createElement("pre");
-                logger.id = "logger";
-                $("#dialog").html(logger);
-                (function(logger) {
-                    console.old = console.log;
-                    console.log = function() {
-                        let output = "",
-                            arg, i;
-                        for (i = 0; i < arguments.length; i++) {
-                            arg = arguments[i];
-                            output += "<span class='log-" + (typeof arg) + "'>";
-                            if (
-                                typeof arg === "object" &&
-                                typeof JSON === "object" &&
-                                typeof JSON.stringify === "function"
-                            ) {
-                                output += JSON.stringify(arg);
-                            } else {
-                                output += arg;
-                            }
-                            output += "</span>&nbsp;";
-                        }
-                        logger.innerHTML = logger.innerHTML + "<br>" + output;
-                        $("#logger").scrollTop($("#logger")[0].scrollHeight);
-                        console.old.apply(undefined, arguments);
-                    };
-                })(logger);
-                console.log("Loading...")
-            });
-        });
-    })
 
+
+			position: {
+				my: "left top",
+				at: "left bottom",
+				of: "#startButton"
+			},
+
+			buttons: [
+
+				{
+					text: "Initialize",
+					id: "dialogInit",
+					click: function() {
+						localStoreGet()
+						$("#dialogInit").button("disable");
+					}
+				},
+
+				{
+					text: "Open Database",
+					id: "dialogDB",
+					click: function() {
+						window.open("https://app.prolific.co/st", "_blank")
+					}
+				},
+				{
+					text: "Start",
+					id: "dialogStart",
+					disabled: true,
+					click: function() {
+						running = true;
+						getPages()
+
+						$("#dialogStop").button("enable");
+						$("#dialogStart").button("disable");
+
+					}
+				},
+				{
+					text: "Stop",
+					id: "dialogStop",
+					disabled: true,
+					click: function() {
+						console.log("Stopped");
+						$("#dialogStart").button("enable");
+						$("#dialogStop").button("disable");
+						running = false;
+					}
+				},
+				{
+					text: "Close",
+					id: "dialogClose",
+					click: function() {
+						console.log = console.old;
+						$(this).dialog("close");
+					}
+				}
+			]
+		};
+
+
+		$(function() {
+			$("#dialog").dialog(opt);
+
+			$("#startButton").click(function() {
+				// localStoreGet()
+				initDB()
+				$("#dialog").dialog("open");
+				// $("#dialog").html(guiContainer);
+
+
+			})
+		})
+
+
+
+		let logger = document.createElement("pre");
+		logger.id = "logger";
+		$("#dialog").html(logger);
+
+		(function(logger) {
+			console.old = console.log;
+			console.log = function() {
+				let output = "",
+					arg, i;
+				for (i = 0; i < arguments.length; i++) {
+					arg = arguments[i];
+					output += "<span class='log-" + (typeof arg) + "'>";
+					if (
+						typeof arg === "object" &&
+						typeof JSON === "object" &&
+						typeof JSON.stringify === "function"
+					) {
+						output += JSON.stringify(arg);
+					} else {
+						output += arg;
+					}
+					output += "</span>&nbsp;";
+				}
+				logger.innerHTML = "<br>" + output + logger.innerHTML;
+				// $("#logger").scrollTop($("#logger")[0].scrollHeight);
+				console.old.apply(undefined, arguments);
+			};
+		})(logger);
+		console.log("Loading...")
+
+	})
+/*
 function initDB() {
 
-    db = new Dexie("submissions");
+   var db = new Dexie("submissions");
     console.log("init db")
     db.version(1).stores({
         entries: `
@@ -371,147 +446,155 @@ study,
 study_code,
 researcher,
 completed_at,
+started_at,
 bonus_payments,
 bonus_currency,
 adjustment_payments,
 adjustment_currency
 
                 `
-    })
+    });
+    console.log(db+" at init")
+db.open().catch (function (err) {
+    console.error('Failed to open db: ' + (err.stack || err));
     return db;
-}
+})}
+*/
+async function processSubmissions(data, db) {
+	db = await initDB(db)
 
-function processSubmissions(data, db) {
-    console.log("process submissions")
-    const submissions = data.results.map(submission => ({
-        id: submission.id,
-        status: submission.status,
-        study: submission.study.name,
-        study_code: submission.study_code,
-        reward: submission.study.reward,
-        researcher: submission.study.researcher.name,
-        adjustment_payments: submission.adjustment_total.amount,
-        adjustment_currency: submission.adjustment_total.currency,
-        bonus_payments: submission.bonus_total.amount,
-        bonus_currency: submission.bonus_total.currency,
-        completed_at: submission.completed_at
-    }));
+	console.log(db + " at procsubs")
+	const submissions = data.results.map(submission => ({
+		id: submission.id,
+		status: submission.status,
+		study: submission.study.name,
+		study_code: submission.study_code,
+		reward: submission.study.reward,
+		researcher: submission.study.researcher.name,
+		adjustment_payments: submission.adjustment_total.amount,
+		adjustment_currency: submission.adjustment_total.currency,
+		bonus_payments: submission.bonus_total.amount,
+		bonus_currency: submission.bonus_total.currency,
+		completed_at: submission.completed_at,
+		started_at: submission.started_at
+	}));
 
-    populateDatabase(submissions, db);
+	populateDatabase(submissions, db);
 }
 
 
 
 function populateDatabase(submissions, db) {
-    console.log("populate database")
-    submissions.forEach(submission => {
-        let defaultSubmission = {
-            id: submission.id || "-",
-            reward: submission.reward || 0,
-            status: submission.status || "none",
-            study: submission.study || "none",
-            researcher: submission.researcher || "none",
-            adjustment_payments: submission.adjustment_total || 0,
-            adjustment_currency: submission.adjustment_currency || "none",
-            bonus_payments: submission.bonus_total || 0,
-            bonus_currency: submission.bonus_currency || "none",
-            completed_at: submission.completed_at || "none",
-            study_code: submission.study_code || "none"
-        };
-        db.entries.bulkAdd([defaultSubmission]);
-    });
+	console.log(db + " at popdb")
+	submissions.forEach(submission => {
+		let defaultSubmission = {
+			id: submission.id || "-",
+			reward: submission.reward || 0,
+			status: submission.status || "none",
+			study: submission.study || "none",
+			researcher: submission.researcher || "none",
+			adjustment_payments: submission.adjustment_payments || 0,
+			adjustment_currency: submission.adjustment_currency || "none",
+			bonus_payments: submission.bonus_payments || 0,
+			bonus_currency: submission.bonus_currency || "none",
+			completed_at: submission.completed_at || submission.started_at,
+			study_code: submission.study_code || "none",
+
+		};
+
+		db.entries.bulkAdd([defaultSubmission]);
+	});
 }
 
 
 function warningDialog() {
-    if (!localStorage.getItem("warningRead")) {
-        Swal.fire({
-            title: "Placeholder Title",
-            text: "Placeholder text content",
-            showCancelButton: true,
-            cancelButtonText: "Dismiss",
-            confirmButtonText: "More Info",
-            dangerMode: true,
-            backdrop: false,
-            allowOutsideClick: false,
-            showClass: {
-                backdrop: 'swal2-noanimation',
-                popup: '',
-                icon: ''
-            },
-            hideClass: {
-                popup: '',
-            },
-        }).then(result => {
-            if (result.value) {
-                Swal.fire({
-                    title: "Placeholder Title",
-                    text: "Placeholder text content for more information.",
-                    showCancelButton: false,
-                    confirmButtonText: "Dismiss",
-                    backdrop: false,
-                    dangerMode: true,
-                    allowOutsideClick: false,
-                    showClass: {
-                        backdrop: 'swal2-noanimation',
-                        popup: '',
-                        icon: ''
-                    },
-                    hideClass: {
-                        popup: '',
-                    },
-                });
-            }
+	if (!localStorage.getItem("warningRead")) {
+		Swal.fire({
+			title: "Placeholder Title",
+			text: "Placeholder text content",
+			showCancelButton: true,
+			cancelButtonText: "Dismiss",
+			confirmButtonText: "More Info",
+			dangerMode: true,
+			backdrop: false,
+			allowOutsideClick: false,
+			showClass: {
+				backdrop: 'swal2-noanimation',
+				popup: '',
+				icon: ''
+			},
+			hideClass: {
+				popup: '',
+			},
+		}).then(result => {
+			if (result.value) {
+				Swal.fire({
+					title: "Placeholder Title",
+					text: "Placeholder text content for more information.",
+					showCancelButton: false,
+					confirmButtonText: "Dismiss",
+					backdrop: false,
+					dangerMode: true,
+					allowOutsideClick: false,
+					showClass: {
+						backdrop: 'swal2-noanimation',
+						popup: '',
+						icon: ''
+					},
+					hideClass: {
+						popup: '',
+					},
+				});
+			}
 
-        }).then(() => {
-            localStorage.setItem("warningRead", true);
-        });
-    }
+		}).then(() => {
+			localStorage.setItem("warningRead", true);
+		});
+	}
 }
 
 function unknownError() {
-    alert("Woops. Unhandled error. Bailing out.")
-    return;
+	alert("Woops. Unhandled error. Bailing out.")
+	return;
 }
 
 function urlWatcher() {
-    var targetNode = document.body;
-    var config = {
-        attributes: true,
-        childList: true,
-        subtree: true
-    };
-    var observer = new MutationObserver(function(mutationsList) {
+	var targetNode = document.body;
+	var config = {
+		attributes: true,
+		childList: true,
+		subtree: true
+	};
+	var observer = new MutationObserver(function(mutationsList) {
 
-        if (location.href.indexOf("app.prolific.co/submissions") !== -1) {
-            document.getElementById("startButton").style.display = "block";
-        } else {
-            document.getElementById("startButton").style.display = "none";
-        }
-    });
+		if (location.href.indexOf("app.prolific.co/submissions") !== -1) {
+			document.getElementById("startButton").style.display = "block";
+		} else {
+			document.getElementById("startButton").style.display = "none";
+		}
+	});
 
 
-    observer.observe(targetNode, config);
+	observer.observe(targetNode, config);
 
 }
 /*ag-grid*/
 
 if (location.href === "https://app.prolific.co/st") {
 
-    console.log("test")
-    //document.innerHTML = "";
-    document.body.innerHTML = "";
-    let gridDiv = document.createElement("div");
-    gridDiv.setAttribute("id", "gridDiv");
-    document.body.appendChild(gridDiv);
-    document.title = "Submission History";
+	console.log("test")
+	document.body.innerHTML = "";
+	let gridDiv = document.createElement("div");
+	gridDiv.setAttribute("id", "gridDiv");
+	document.body.appendChild(gridDiv);
+	document.title = "Submission History";
 
 
-    /*init db*/
-    db = new Dexie("submissions");
-    console.log("init db")
-    db.version(1).stores({
-        entries: `
+	/*init db*/
+	let db = new Dexie("submissions");
+	console.log("init db")
+	db.version(1).stores({
+		entries: `
 
 id++,
 reward,
@@ -523,11 +606,12 @@ completed_at,
 bonus_payments,
 bonus_currency,
 adjustment_payments,
-adjustment_currency
+adjustment_currency,
+started_at
 
                 `
-    })
-    gridDiv.innerHTML = `
+	})
+	gridDiv.innerHTML = `
 <div id="myGrid"  class="ag-theme-alpine">
 <style>
 .ag-theme-alpine {
@@ -545,120 +629,148 @@ adjustment_currency
 
 
 
-    const gridOptions = {
-        columnDefs: [{
+	const gridOptions = {
+		columnDefs: [{
 
-                field: "study_name",
-                width: 450
-            },
-            {
-                field: "researcher",
-                width: 250
-            },
-
-
-            {
-                field: "status",
-                width: 100
-            },
+				field: "study",
+				width: 450
+			},
+			{
+				field: "researcher",
+				width: 250
+			},
 
 
-
-            {
-                headerName: "Reward",
-                field: "reward",
-                width: 100,
-                valueFormatter: function(params) {
-                    return "£" + params.value.toFixed(2);
-                }
-            },
-
-
-            {
-                field: "bonus_payments",
-                width: 100,
-                valueGetter: function(params) {
-                    var amount = params.data.bonus_payments;
-                    var currency = params.data.bonus_currency;
-                    var symbol = currency === "GBP" ? "£" : (currency === "USD" ? "$" : "");
-                    return symbol + (amount / 100).toFixed(2);
-
-                },
-                comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
-                    if (valueA === "none" && valueB === "none") return 0;
-                    if (valueA === "none") return 1;
-                    if (valueB === "none") return -1;
-                    return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
-                },
-            },
-
-            {
-                field: "adjustment_payments",
-                width: 100,
-                valueGetter: function(params) {
-                    var amount = params.data.adjustment_payments;
-                    var currency = params.data.adjustment_currency;
-                    var symbol = currency === "GBP" ? "£" : (currency === "USD" ? "$" : "");
-                    return symbol + (amount / 100).toFixed(2);
-
-                },
-                comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
-                    if (valueA === "none" && valueB === "none") return 0;
-                    if (valueA === "none") return 1;
-                    if (valueB === "none") return -1;
-                    return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
-                },
-            },
+			{
+				field: "status",
+				width: 100
+			},
 
 
 
-            {
-
-                headerName: "Date",
-                field: "completed_at",
-                width: 100,
-                valueGetter: function(params) {
-                    var date = new Date(params.data.completed_at);
-                    if (isNaN(date.getTime())) return "-";
-                    return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
-                },
-                comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
-                    if (valueA === "-" && valueB === "-") return 0;
-                    if (valueA === "-") return 1;
-                    if (valueB === "-") return -1;
-                    var dateA = new Date(valueA);
-                    var dateB = new Date(valueB);
-                    return dateA > dateB ? 1 : (dateA < dateB ? -1 : 0);
-
-                },
-
-                field: "study_code",
-                width: 150
-            },
-            {
-                field: "id",
-
-            },
-        ],
+			{
+				headerName: "Reward",
+				field: "reward",
+				width: 100,
+				valueGetter: function(params) {
+					var amount = params.data.reward;
+					return "£" + (amount / 100).toFixed(2);
+				}
+			},
 
 
-        defaultColDef: {
-            sortable: true,
-            filter: true,
-            editable: true,
-            resizable: true,
-        },
-        rowSelection: 'multiple',
-        animateRows: true,
-        rowData: []
-    };
+			{
+				field: "bonus_payments",
+				width: 100,
+				valueGetter: function(params) {
+					var amount = params.data.bonus_payments;
+					var currency = params.data.bonus_currency;
+					var symbol = currency === "GBP" ? "£" : (currency === "USD" ? "$" : "");
+					return symbol + (amount / 100).toFixed(2);
 
-    window.addEventListener('load', function() {
-        const gridDiv = document.querySelector('#myGrid');
-        db.entries.toArray().then(data => {
-            gridOptions.rowData = data;
-            new agGrid.Grid(gridDiv, gridOptions);
+				},
+				comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
+					if (valueA === "none" && valueB === "none") return 0;
+					if (valueA === "none") return 1;
+					if (valueB === "none") return -1;
+					return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
+				},
+			},
 
-        })
-    })
+			{
+				field: "adjustment_payments",
+				width: 100,
+				valueGetter: function(params) {
+					var amount = params.data.adjustment_payments;
+					var currency = params.data.adjustment_currency;
+					var symbol = currency === "GBP" ? "£" : (currency === "USD" ? "$" : "");
+					return symbol + (amount / 100).toFixed(2);
+
+				},
+				comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
+					if (valueA === "none" && valueB === "none") return 0;
+					if (valueA === "none") return 1;
+					if (valueB === "none") return -1;
+					return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
+				},
+			}, {
+				headerName: "Date",
+				field: "completed_at",
+				width: 100,
+				valueGetter: function(params) {
+					var completed_at = params.data.completed_at;
+					var started_at = params.data.started_at;
+
+					console.log("params.data.completed_at:", completed_at);
+					console.log("params.data.started_at:", started_at);
+
+					if (completed_at === null || completed_at === undefined) {
+						completed_at = started_at;
+					}
+
+					var date = new Date(completed_at);
+					if (isNaN(date.getTime())) return "-";
+
+					console.log("date:", date);
+
+					return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
+				},
+				sortType: 'date',
+				comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
+					var dateA = new Date(valueA);
+					var dateB = new Date(valueB);
+					return dateA - dateB;
+				},
+			},
+			/*
+			            {
+
+			                headerName: "Date",
+			                field: "completed_at",
+			                width: 100,
+			                valueGetter: function(params) {
+			                    var date = new Date(params.data.completed_at);
+			                    if (isNaN(date.getTime())) return "-";
+			                    return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
+			                },
+			 comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
+			  if (valueA === "-" && valueB === "-") return 0;
+			  if (valueA === "-") return 1;
+			  if (valueB === "-") return -1;
+			  var dateA = new Date(valueA);
+			  var dateB = new Date(valueB);
+			  return isInverted ? (dateB - dateA) : (dateA - dateB);
+			},},
+			*/
+			{
+
+				field: "study_code",
+				width: 150
+			},
+			{
+				field: "id",
+
+			},
+		],
+
+
+		defaultColDef: {
+			sortable: true,
+			filter: true,
+			editable: true,
+			resizable: true,
+		},
+		rowSelection: 'multiple',
+		animateRows: true,
+		rowData: []
+	};
+
+	window.addEventListener('load', function() {
+		const gridDiv = document.querySelector('#myGrid');
+		db.entries.toArray().then(data => {
+			gridOptions.rowData = data;
+			new agGrid.Grid(gridDiv, gridOptions);
+
+		})
+	})
 }
