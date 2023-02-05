@@ -11,7 +11,6 @@
 // @require      https://code.jquery.com/ui/1.13.2/jquery-ui.js
 // @require      https://unpkg.com/dexie/dist/dexie.js
 // @require      https://unpkg.com/ag-grid-community@29.0.0/dist/ag-grid-community.min.js
-// @require      https://cdn.jsdelivr.net/npm/sweetalert2@11
 // @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css
 // @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-apline.css
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=prolific.co
@@ -20,8 +19,7 @@
 // ==/UserScript==
 let running = false;
 let start = false;
-//let db;
-//**********TODO instituation/researcher*****//
+
 document.arrive(".help-centre", {
 		onceOnly: true
 	},
@@ -39,13 +37,9 @@ document.arrive(".help-centre", {
 			o.style.borderRadius = "25px";
 			o.style.color = "#207bbc";
 			o.id = "startButton";
-			o.innerHTML = "DATABASE<br>";
+			o.innerHTML = "<strong>DATABASE<br></strong>";
 			e.insertAdjacentElement("afterend", o);
-
-
-
-
-		}
+}
 	})
 
 
@@ -67,6 +61,7 @@ function localStoreGet() {
 		}
 	});
 }
+
 async function getUserID() {
 
 	const accountIframe = await accountFrame();
@@ -95,6 +90,7 @@ function accountFrame() {
 	return accountIframe;
 }
 
+//********************//
 async function initDB(db) {
 	return new Promise((resolve) => {
 
@@ -114,7 +110,8 @@ started_at,
 bonus_payments,
 bonus_currency,
 adjustment_payments,
-adjustment_currency
+adjustment_currency,
+institution
 
                 `
 		});
@@ -122,7 +119,7 @@ adjustment_currency
 	})
 }
 
-//***********************?//
+//***********************//
 async function getMaxPages(userID) {
 
 	const maxPagesIframe = await maxPagesFrame();
@@ -149,6 +146,7 @@ async function getMaxPages(userID) {
 			console.log("This program fetches your")
 			console.log("------------------------------------------")
 			localStorage.setItem("maxPages", maxPages1);
+
 			tokenLogic(maxPages1, userID);
 			resolve(maxPages1);
 			$("#maxPagesFrame").remove();
@@ -199,6 +197,7 @@ async function tokenLogic(maxPages1, userID) {
 
 				resolve(token);
 				$("frame").remove();
+				getPages(token)
 
 			}
 		};
@@ -227,17 +226,16 @@ function tokenFrame() {
 var currentPage = 0
 let startTime = new Date();
 async function getPages() {
+	startTime = new Date();
 	currentPage++
-	// console.log(db+" at main")
 	const userID = localStorage.getItem("userID");
 	const maxPages1 = localStorage.getItem("maxPages");
-	const maxPages = maxPages1 / 5;
+	var maxPages = maxPages1 / 5;
 	const token = localStorage.getItem("token");
 	if (currentPage === 1) {
 		console.log("Fetching page " + currentPage);
 	}
 	if (!running) {
-		// console.log("canceled");
 		return
 	}
 	if (currentPage <= maxPages) {
@@ -260,7 +258,6 @@ async function getPages() {
 			)
 			.then((response) => response.json())
 			.then((data) => {
-				//console.log(data);
 				processSubmissions(data);
 			})
 			.catch(function(error) {
@@ -272,9 +269,8 @@ async function getPages() {
 		let seconds = Math.round(timeDiff / 1000);
 		let minutes = Math.floor(seconds / 60);
 		seconds = seconds % 60;
-		/*db.entries.count().then(count => {
-		  console.log(count+" entries were added or updated in "+minutes+":"+seconds);
-		});*/
+		var progressText = document.querySelector('.progress-bar p');
+		progressText.textContent = "Completed in " + minutes + ":" + seconds;
 		console.log("------------------------------------------")
 		console.log("Complete. " + minutes + ":" + seconds)
 		console.log("------------------------------------------")
@@ -283,24 +279,95 @@ async function getPages() {
 	pageDelay()
 }
 
+
+
 function pageDelay() {
+	const maxPages1 = localStorage.getItem("maxPages");
+	var maxPages = maxPages1 / 5;
 	setTimeout(() => {
 		if (running) {
 			//currentPage++
 			getPages()
-
+			updateProgressBar(currentPage, maxPages)
 			console.log("Fetching page " + currentPage);
 		}
 	}, "15000")
 }
 
 
+
+/********************/
+
+const css = `
+.wrapper {
+				width: auto;
+			}
+
+			.progress-bar {
+				width: 100%;
+				background-color: #e0e0e0;
+				padding: 3px;
+				border-radius: 3px;
+				box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+			}
+
+			.progress-bar-fill {
+				display: block;
+				height: 22px;
+				background-color: #659cef;
+				border-radius: 3px;
+                overflow: hidden;
+				transition: width 500ms ease-in-out;
+
+			}`
+const style = document.createElement("style");
+style.innerHTML = css;
+document.head.appendChild(style);
+
+
+let currentPercentage = 0;
+var barContainer = `
+<div class="wrapper">
+			<div class="progress-bar">
+				<span class="progress-bar-fill" style="width: ${currentPercentage}%"></span>
+                <p>Press Start to Begin</p>
+                <p></p>
+			</div>
+		</div>`;
+
+let updateProgressBarTimeout;
+var updateProgressBar = (currentPage, maxPages) => {
+	if (!running) {
+		clearTimeout(updateProgressBarTimeout);
+		return;
+	}
+	var targetPercentage = Math.floor((currentPage / maxPages) * 100);
+	if (currentPercentage < targetPercentage) {
+		currentPercentage++;
+		barContainer = `
+<div class="wrapper">
+			<div class="progress-bar">
+				<span class="progress-bar-fill" style="width: ${currentPercentage}%"></span>
+                <p>Working...</p>
+                <p></p>
+			</div>
+		</div>`;
+		document.getElementById("dialog").innerHTML = barContainer;
+		updateProgressBarTimeout = setTimeout(() => updateProgressBar(currentPage, maxPages), 4000);
+	}
+};
+
+
+
+/**************/
 document.arrive(".help-centre", {
 		onceOnly: true
 	},
 
 	function() {
-
+		let dialogLogDiv = document.createElement("div");
+		dialogLogDiv.id = "dialogLog";
+		document.body.appendChild(dialogLogDiv);
 		let dialogDiv = document.createElement("div");
 		dialogDiv.id = "dialog";
 		document.body.appendChild(dialogDiv);
@@ -315,13 +382,14 @@ document.arrive(".help-centre", {
 		var opt = {
 			width: 700,
 			minWidth: 700,
-			minHeight: 400,
-			maxHeight: 400,
+			minHeight: 250,
+			maxHeight: 250,
 			modal: false,
 			autoOpen: false,
 			overflowY: scroll,
 			title: " ",
 			zIndex: 1,
+			dialogClass: "no-titlebar",
 
 
 
@@ -331,19 +399,25 @@ document.arrive(".help-centre", {
 				of: "#startButton"
 			},
 
-			buttons: [
-
-				{
-					text: "Initialize",
-					id: "dialogInit",
+			buttons: [{
+					text: "Show Log",
+					id: "dialogLogButton",
 					click: function() {
-						localStoreGet()
-						$("#dialogInit").button("disable");
+						$("#dialogLog").dialog("open");
 					}
 				},
 
+				/*   {
+				       text: "Initialize",
+				       id: "dialogInit",
+				       click: function() {
+				           localStoreGet()
+				           $("#dialogInit").button("disable");
+				       }
+				   },*/
+
 				{
-					text: "Open Database",
+					text: "Database",
 					id: "dialogDB",
 					click: function() {
 						window.open("https://app.prolific.co/st", "_blank")
@@ -352,13 +426,18 @@ document.arrive(".help-centre", {
 				{
 					text: "Start",
 					id: "dialogStart",
-					disabled: true,
+					//disabled: true,
 					click: function() {
-						running = true;
-						getPages()
+
 
 						$("#dialogStop").button("enable");
 						$("#dialogStart").button("disable");
+						var progressText = document.querySelector('.progress-bar p');
+						progressText.textContent = "Initializing...";
+						// barFirstRun()
+						running = true;
+						localStoreGet() //.then(getPages);
+
 
 					}
 				},
@@ -367,6 +446,8 @@ document.arrive(".help-centre", {
 					id: "dialogStop",
 					disabled: true,
 					click: function() {
+						var progressText = document.querySelector('.progress-bar p');
+						progressText.textContent = "Stopped";
 						console.log("Stopped");
 						$("#dialogStart").button("enable");
 						$("#dialogStop").button("disable");
@@ -384,25 +465,55 @@ document.arrive(".help-centre", {
 			]
 		};
 
+		var optL = {
+			width: 700,
+			minWidth: 700,
+			minHeight: 400,
+			maxHeight: 400,
+			modal: false,
+			autoOpen: false,
+			overflowY: scroll,
+			title: "Console Log ",
+			zIndex: 1,
+
+
+
+			position: {
+				my: "right bottom",
+				at: "right bottom",
+				of: window
+			},
+
+			buttons: [{
+
+
+				text: "Close",
+				id: "dialogLogClose",
+				click: function() {
+					//console.log = console.old;
+					$(this).dialog("close");
+				}
+			}]
+		};
+
 
 		$(function() {
 			$("#dialog").dialog(opt);
 
+			$("#dialog").html(barContainer);
 			$("#startButton").click(function() {
-				// localStoreGet()
-				initDB()
 				$("#dialog").dialog("open");
-				// $("#dialog").html(guiContainer);
-
-
 			})
 		})
 
-
+    $(function() {
+			$("#dialogLog").dialog(optL);
+			$("#dialogLog").html(logger);
+		})
 
 		let logger = document.createElement("pre");
 		logger.id = "logger";
-		$("#dialog").html(logger);
+		$("#dialogLog").html(logger);
 
 		(function(logger) {
 			console.old = console.log;
@@ -431,35 +542,8 @@ document.arrive(".help-centre", {
 		console.log("Loading...")
 
 	})
-/*
-function initDB() {
 
-   var db = new Dexie("submissions");
-    console.log("init db")
-    db.version(1).stores({
-        entries: `
-
-id++,
-reward,
-status,
-study,
-study_code,
-researcher,
-completed_at,
-started_at,
-bonus_payments,
-bonus_currency,
-adjustment_payments,
-adjustment_currency
-
-                `
-    });
-    console.log(db+" at init")
-db.open().catch (function (err) {
-    console.error('Failed to open db: ' + (err.stack || err));
-    return db;
-})}
-*/
+/******************/
 async function processSubmissions(data, db) {
 	db = await initDB(db)
 
@@ -476,7 +560,8 @@ async function processSubmissions(data, db) {
 		bonus_payments: submission.bonus_total.amount,
 		bonus_currency: submission.bonus_total.currency,
 		completed_at: submission.completed_at,
-		started_at: submission.started_at
+		started_at: submission.started_at,
+		institution: submission.study.researcher.institution.name
 	}));
 
 	populateDatabase(submissions, db);
@@ -492,7 +577,7 @@ function populateDatabase(submissions, db) {
 			reward: submission.reward || 0,
 			status: submission.status || "none",
 			study: submission.study || "none",
-			researcher: submission.researcher || "none",
+			researcher: submission.institution || submission.researcher || "none",
 			adjustment_payments: submission.adjustment_payments || 0,
 			adjustment_currency: submission.adjustment_currency || "none",
 			bonus_payments: submission.bonus_payments || 0,
@@ -509,46 +594,27 @@ function populateDatabase(submissions, db) {
 
 function warningDialog() {
 	if (!localStorage.getItem("warningRead")) {
-		Swal.fire({
+		$("<div>Placeholder text content</div>").dialog({
 			title: "Placeholder Title",
-			text: "Placeholder text content",
-			showCancelButton: true,
-			cancelButtonText: "Dismiss",
-			confirmButtonText: "More Info",
-			dangerMode: true,
-			backdrop: false,
-			allowOutsideClick: false,
-			showClass: {
-				backdrop: 'swal2-noanimation',
-				popup: '',
-				icon: ''
-			},
-			hideClass: {
-				popup: '',
-			},
-		}).then(result => {
-			if (result.value) {
-				Swal.fire({
-					title: "Placeholder Title",
-					text: "Placeholder text content for more information.",
-					showCancelButton: false,
-					confirmButtonText: "Dismiss",
-					backdrop: false,
-					dangerMode: true,
-					allowOutsideClick: false,
-					showClass: {
-						backdrop: 'swal2-noanimation',
-						popup: '',
-						icon: ''
-					},
-					hideClass: {
-						popup: '',
-					},
-				});
+			modal: true,
+			buttons: {
+				Dismiss: function() {
+					$(this).dialog("close");
+					localStorage.setItem("warningRead", true);
+				},
+				"More Info": function() {
+					$("<div>Placeholder text content for more information.</div>").dialog({
+						title: "Placeholder Title",
+						modal: true,
+						buttons: {
+							Dismiss: function() {
+								$(this).dialog("close");
+								localStorage.setItem("warningRead", true);
+							},
+						}
+					});
+				}
 			}
-
-		}).then(() => {
-			localStorage.setItem("warningRead", true);
 		});
 	}
 }
@@ -607,7 +673,8 @@ bonus_payments,
 bonus_currency,
 adjustment_payments,
 adjustment_currency,
-started_at
+started_at,
+institution
 
                 `
 	})
@@ -655,6 +722,12 @@ started_at
 				valueGetter: function(params) {
 					var amount = params.data.reward;
 					return "£" + (amount / 100).toFixed(2);
+
+				},
+				comparator: function(valueA, valueB) {
+					var rewardA = parseFloat(valueA.substring(1));
+					var rewardB = parseFloat(valueB.substring(1));
+					return rewardA - rewardB;
 				}
 			},
 
@@ -673,7 +746,11 @@ started_at
 					if (valueA === "none" && valueB === "none") return 0;
 					if (valueA === "none") return 1;
 					if (valueB === "none") return -1;
-					return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
+
+					const amountA = parseFloat(valueA.replace(/[£$]/g, ''));
+					const amountB = parseFloat(valueB.replace(/[£$]/g, ''));
+
+					return amountA > amountB ? 1 : (amountA < amountB ? -1 : 0);
 				},
 			},
 
@@ -691,7 +768,11 @@ started_at
 					if (valueA === "none" && valueB === "none") return 0;
 					if (valueA === "none") return 1;
 					if (valueB === "none") return -1;
-					return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
+
+					const amountA = parseFloat(valueA.replace(/[£$]/g, ''));
+					const amountB = parseFloat(valueB.replace(/[£$]/g, ''));
+
+					return amountA > amountB ? 1 : (amountA < amountB ? -1 : 0);
 				},
 			}, {
 				headerName: "Date",
@@ -722,26 +803,7 @@ started_at
 					return dateA - dateB;
 				},
 			},
-			/*
-			            {
 
-			                headerName: "Date",
-			                field: "completed_at",
-			                width: 100,
-			                valueGetter: function(params) {
-			                    var date = new Date(params.data.completed_at);
-			                    if (isNaN(date.getTime())) return "-";
-			                    return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
-			                },
-			 comparator: function(valueA, valueB, nodeA, nodeB, isInverted) {
-			  if (valueA === "-" && valueB === "-") return 0;
-			  if (valueA === "-") return 1;
-			  if (valueB === "-") return -1;
-			  var dateA = new Date(valueA);
-			  var dateB = new Date(valueB);
-			  return isInverted ? (dateB - dateA) : (dateA - dateB);
-			},},
-			*/
 			{
 
 				field: "study_code",
