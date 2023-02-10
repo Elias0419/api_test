@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         refactoring test
+// @name         PROLIFIC SCRIPT MAIN
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  try to take over the world!
 // @author       You
 // @match        https://app.prolific.co/*
@@ -20,7 +20,6 @@
 let running = false;
 
 
-
 document.arrive(".help-centre", {
     onceOnly: true
 },
@@ -30,14 +29,14 @@ document.arrive(".help-centre", {
     let buttonElem = document.querySelector('.right');
     if (buttonElem) {
 
-       // warningDialog()
-           let buttonElemParent = buttonElem.parentNode;
-           let buttonDiv = document.createElement("div");
-            buttonDiv.style.cursor = "pointer";
-           buttonDiv.classList.add("startButtonClass");
-           buttonDiv.id = "startButton";
-           buttonDiv.innerHTML = "DB<br>";
-           buttonElemParent.insertAdjacentElement("afterend", buttonDiv);
+        // warningDialog()
+        let buttonElemParent = buttonElem.parentNode;
+        let buttonDiv = document.createElement("div");
+        buttonDiv.style.cursor = "pointer";
+        buttonDiv.classList.add("startButtonClass");
+        buttonDiv.id = "startButton";
+        buttonDiv.innerHTML = "DB<br>";
+        buttonElemParent.insertAdjacentElement("afterend", buttonDiv);
 
 
     }
@@ -46,7 +45,7 @@ document.arrive(".help-centre", {
 
 
 function localStoreGet() {
-     if (!running) {
+    if (!running) {
         return;}
     running = true;
     return new Promise((resolve, reject) => {
@@ -66,14 +65,14 @@ function localStoreGet() {
 }
 
 async function getUserID() {
- if (!running) {
+    if (!running) {
         return;}
     const accountIframe = await accountFrame();
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             let userID = accountIframe.contentDocument.querySelector(".prolific-id").innerText;
             localStorage.setItem("userID", userID);
-            getMaxPages(userID);
+            getMaxPages();
             resolve(userID)
             console.log("userID function returns "+userID )
             $("#accountFrame").remove();
@@ -83,7 +82,7 @@ async function getUserID() {
 }
 
 function accountFrame() {
- if (!running) {
+    if (!running) {
         return;}
 
     let accountIframe = document.createElement("iframe");
@@ -125,8 +124,8 @@ institution
 }
 
 //***********************//
-async function getMaxPages(userID) {
- if (!running) {
+async function getMaxPages() {
+    if (!running) {
         return;}
     const maxPagesIframe = await maxPagesFrame();
     return new Promise((resolve, reject) => {
@@ -152,9 +151,9 @@ async function getMaxPages(userID) {
             console.log("------------------------------------------")
             localStorage.setItem("maxPages", maxPages1);
 
-            tokenLogic(maxPages1, userID);
+            tokenLogic();
             resolve(maxPages1);
-             console.log("maxPages function returns maxPages1 "+maxPages1+" and maxPages "+maxPages )
+            console.log("maxPages function returns maxPages1 "+maxPages1+" and maxPages "+maxPages )
             $("#maxPagesFrame").remove();
 
         }, 10000);
@@ -163,7 +162,7 @@ async function getMaxPages(userID) {
 
 function maxPagesFrame() {
 
- if (!running) {
+    if (!running) {
         return;}
     let maxPagesIFrame = document.createElement("iframe");
     maxPagesIFrame.src = "https://app.prolific.co/submissions";
@@ -171,15 +170,14 @@ function maxPagesFrame() {
     maxPagesIFrame.id = "maxPagesFrame";
     let summaryDiv = document.querySelector(".help-centre");
     summaryDiv.appendChild(maxPagesIFrame);
-
     return maxPagesIFrame;
 }
 
 //*********************//
 
-async function tokenLogic(maxPages1, userID) {
+async function tokenLogic() {
 
- if (!running) {
+    if (!running) {
         return;}
     const iframe = await tokenFrame();
     return new Promise((resolve, reject) => {
@@ -205,7 +203,7 @@ async function tokenLogic(maxPages1, userID) {
 
                 resolve(token);
                 $("frame").remove();
-                 console.log("tokenLogic function returns "+token )
+                console.log("tokenLogic function returns "+token )
                 getPages(token)
 
             }
@@ -214,7 +212,7 @@ async function tokenLogic(maxPages1, userID) {
 }
 
 function tokenFrame() {
- if (!running) {
+    if (!running) {
         return;}
 
     let iframe = document.createElement("iframe");
@@ -223,10 +221,7 @@ function tokenFrame() {
     iframe.id = "frame";
     let summaryDiv = document.querySelector(".help-centre");
     summaryDiv.appendChild(iframe);
-
-
     return iframe;
-
 }
 
 
@@ -234,17 +229,17 @@ function tokenFrame() {
 /********************/
 
 var currentPage = 0
-let startTime = new Date();
+
 
 async function getPages() {
 
-    startTime = new Date();
+    let startTime = new Date();
     currentPage++;
     const userID = localStorage.getItem("userID");
     const maxPages1 = localStorage.getItem("maxPages");
     var maxPages = maxPages1 / 5;
     const token = localStorage.getItem("token");
-  
+
     if (!running) {
         return;
     }
@@ -274,6 +269,9 @@ async function getPages() {
             updateProgressBar(currentPage, maxPages);
             if (running) {
                 setTimeout(() => {
+                    if (!running) {
+                        return;
+                    }
                     getPages();
                     updateProgressBar(currentPage, maxPages);
                     console.log("Fetch");
@@ -289,8 +287,7 @@ async function getPages() {
         let seconds = Math.round(timeDiff / 1000);
         let minutes = Math.floor(seconds / 60);
         seconds = seconds % 60;
-        
-        $("#progress-text").text("Completed. " + minutes + ":" + seconds);
+
         console.log("------------------------------------------");
         console.log("Complete. " + minutes + ":" + seconds);
         console.log("------------------------------------------");
@@ -321,7 +318,7 @@ const css = `
 .progress-bar-fill2 {
   height: 22px;
 display: block;
-  background-color: #659cef !important;
+  background-color: #659cef;
   border-radius: 3px;
   width: 0;
   overflow: hidden;
@@ -354,13 +351,12 @@ var barContainer = `
 			<div class="progress-bar2">
 				<span id="pb2" class="progress-bar-fill2" style="width: ${currentPercentage}%"></span>
                 <p id="progress-text">Press Start to Begin</p>
-                
                 <p></p>
 			</div>
-
-		</div>
+          </div>
 <div class="logger"><p id="logger-placeholder"></p></div>
 `;
+
 
 let updateProgressBarTimeout;
 let logOpened = false;
@@ -380,23 +376,36 @@ var updateProgressBar = (currentPage, maxPages) => {
         $("#pb2").width(`${currentPercentage}%`);
         $("#progress-text").text("Working...");
 
-
-        if (logOpened) {initLogger2()
-          console.log(logOpened+" 1")
+        if (currentPercentage === 100) {
+            progressBarComplete();
+            return;
         }
-
-        document.getElementById("dialog").innerHTML = barContainer
 
         updateProgressBarTimeout = setTimeout(() => updateProgressBar(currentPage, maxPages), 4000);
     }
 };
 
-function initLogger2(){
-console.log("initLoggerauto")
- console.log(logOpened+" 1")
-$("#logger-placeholder").html(logger.appendChild);
+function progressBarComplete(){
+    $("#progress-text").text("Complete");
+    $('.progress-bar-fill2').css("background-color", "#00FF00 !important");
+    let lastScrape = new Date()
+    localStorage.setItem("lastScrape", lastScrape);
 }
+function restrictRepeat(){
+    let lastScrape = localStorage.getItem("lastScrape");
+    let now = new Date();
+    let diff = now - new Date(lastScrape);
+    let timeUntilNextRun = 24 * 60 * 60 * 1000 - diff;
+    let hours = Math.floor(timeUntilNextRun / (60 * 60 * 1000));
+    let minutes = Math.floor((timeUntilNextRun % (60 * 60 * 1000)) / (60 * 1000));
+    if (diff <= 24 * 60 * 60 * 1000) {
+        $("#dialogStop").button("disable");
+        $("#dialogStart").button("disable");
+        $("#progress-text").text("This script can only be run once a day. Try again in "+hours+" hours and "+minutes+" minutes." );
+        $('.progress-bar2').css("background-color", "#e0e0e0 !important");
+    }
 
+}
 /**************/
 document.arrive(".help-centre", {
     onceOnly: true
@@ -416,41 +425,38 @@ document.arrive(".help-centre", {
     );
 
     $(function() {
+
         $("#dialog").dialog(opt);
 
         $("#dialog").html(barContainer);
         $("#startButton").click(function() {
-
+            restrictRepeat()
             $("#dialog").dialog("open");
         })
     })
 
-function initLogger(){
-console.log("initLogger")
-$("#logger-placeholder").html(logger);
-}
+    function initLogger(){
+        console.log("initLogger")
+        $("#logger-placeholder").html(logger);
+    }
 
-var opt = {
-  width: 700,
-  minWidth: 700,
-  minHeight: 150,
-  maxHeight: 500,
-  modal: false,
-  autoOpen: false,
-  overflowY: "scroll",
-  title: " ",
-  zIndex: 1,
-  dialogClass: "no-titlebar",
-    draggable: false,
-		resizable: false,
-  open: function(event, ui) {
-    $(".ui-dialog-titlebar").hide()
+    var opt = {
+        width: 700,
+        minWidth: 700,
+        minHeight: 150,
+        maxHeight: 500,
+        modal: false,
+        autoOpen: false,
+        overflowY: "scroll",
+        title: " ",
+        zIndex: 1,
+        dialogClass: "no-titlebar",
+        draggable: false,
+        resizable: false,
+        open: function(event, ui) {
+            $(".ui-dialog-titlebar").hide()
 
-  },
-
-
-
-
+        },
 
         position: {
             my: "left top",
@@ -459,109 +465,109 @@ var opt = {
         },
 
         buttons: [
-             {
-                      text: "Start",
-                      id: "dialogStart",
+            {
+                text: "Start",
+                id: "dialogStart",
 
-                      click: function() {
-
-
-                          $("#dialogStop").button("enable");
-                          $("#dialogStart").button("disable");
-                          var progressText = document.querySelector('#progress-text');
-                          progressText.textContent = "Initializing...";
-
-                          running = true;
-                          localStoreGet()
+                click: function() {
 
 
-                      }
-                  },
-                  {
-                      text: "Stop",
-                      id: "dialogStop",
-                      disabled: true,
-                      style: "margin-right:160px",
-                      click: function() {
-                          var progressText = document.querySelector('.progress-bar2 p');
-                          progressText.textContent = "Stopped";
-                          console.log("Stopped");
-                          $("#dialogStart").button("enable");
-                          $("#dialogStop").button("disable");
-                          running = false;
-                      }
-                  },
+                    $("#dialogStop").button("enable");
+                    $("#dialogStart").button("disable");
+                    $("#progress-text").text("Initializing...");
+
+
+                    running = true;
+                    localStoreGet()
+
+
+                }
+            },
+            {
+                text: "Stop",
+                id: "dialogStop",
+                disabled: true,
+                style: "margin-right:160px",
+                click: function() {
+                    $("#progress-text").text("Stopped");
+
+                    console.log("Stopped");
+                    $("#dialogStart").button("enable");
+                    $("#dialogStop").button("disable");
+                    running = false;
+                }
+            },
 
 
             {
-            text: "Show Log",
-            id: "dialogLogButton",
+                text: "Show Log",
+                id: "dialogLogButton",
 
-           click: function() {
-  if (logOpened) {
-    $("#logger-placeholder").hide();
-    logOpened = false;
-  } else {
-    initLogger()
-      $("#logger-placeholder").show();
-    logOpened = true;
-  }
-}
-        },
+                click: function() {
+                    if (logOpened) {
+                        $("#logger-placeholder").hide();
+                        logOpened = false;
+                    } else {
+                        initLogger()
+                        $("#logger-placeholder").show();
+                        logOpened = true;
+                    }
+                }
+            },
 
-                  {
-                      text: "Open Database",
-                      id: "dialogDB",
-                      //style: "margin-right:160px",
-                      click: function() {
-                          window.open("https://app.prolific.co/st", "_blank")
-                      }
-                  },
-                 
-                  {
-                      text: "Close",
-                      id: "dialogClose",
-                      click: function() {
-                          console.log = console.old;
-                          $(this).dialog("close");
-                      }
-                  }
-                 ]
-  };
+            {
+                text: "Open Database",
+                id: "dialogDB",
+                //style: "margin-right:160px",
+                click: function() {
+                    window.open("https://app.prolific.co/st", "_blank")
+                }
+            },
+
+            {
+                text: "Close",
+                id: "dialogClose",
+                click: function() {
+                    console.log = console.old;
+                    $(this).dialog("close");
+                }
+            }
+        ]
+    };
 
 
 });
 
 
-    let logger = document.createElement("pre");
-    logger.id = "logger";
-  
+let logger = document.createElement("pre");
+logger.id = "logger";
 
-    (function(logger) {
-        console.old = console.log;
-        console.log = function() {
-            let output = "",
-                arg, i;
-            for (i = 0; i < arguments.length; i++) {
-                arg = arguments[i];
-                output += "<span class='log-" + (typeof arg) + "'>";
-                if (
-                    typeof arg === "object" &&
-                    typeof JSON === "object" &&
-                    typeof JSON.stringify === "function"
-                ) {
-                    output += JSON.stringify(arg);
-                } else {
-                    output += arg;
-                }
-                output += "</span>&nbsp;";
+
+(function(logger) {
+    console.old = console.log;
+    console.log = function() {
+        let output = "",
+            arg, i;
+        for (i = 0; i < arguments.length; i++) {
+            arg = arguments[i];
+            output += "<span class='log-" + (typeof arg) + "'>";
+            if (
+                typeof arg === "object" &&
+                typeof JSON === "object" &&
+                typeof JSON.stringify === "function"
+            ) {
+                output += JSON.stringify(arg);
+            } else {
+                output += arg;
             }
-            logger.innerHTML = "<br>" + output + logger.innerHTML;
-            // $("#logger").scrollTop($("#logger")[0].scrollHeight);
-            console.old.apply(undefined, arguments);
-        };
-    })(logger);
-    console.log("Loading...")
+            output += "</span>&nbsp;";
+        }
+        logger.innerHTML = "<br>" + output + logger.innerHTML;
+        // $("#logger").scrollTop($("#logger")[0].scrollHeight);
+        console.old.apply(undefined, arguments);
+    };
+})(logger);
+console.log("Loading...")
 
 
 
