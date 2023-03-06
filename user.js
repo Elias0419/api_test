@@ -1,3 +1,22 @@
+// ==UserScript==
+// @name         prorefactor2
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  try to take over the world!
+// @author       You
+// @match        https://app.prolific.co/*
+// @require      https://code.jquery.com/jquery-3.6.3.js
+// @require      https://code.jquery.com/ui/1.13.2/jquery-ui.js
+// @require      https://unpkg.com/dexie/dist/dexie.js
+// @require      https://unpkg.com/ag-grid-community@29.0.0/dist/ag-grid-community.min.js
+// @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css
+// @resource     https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-apline.css
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=prolific.co
+// @grant        none
+// @noframes
+// @unwrap
+// ==/UserScript==
+
 let logger;
 let startTime;
 let currentPage = 0;
