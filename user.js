@@ -273,7 +273,7 @@ function localStoreGet() {
 
 async function getUserID() {
     if (!running) {
-        removeFrames()
+        removeFrames();
         return;
     }
     try {
@@ -282,13 +282,18 @@ async function getUserID() {
         var getUserIDRetries = 0;
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                let userID = accountIframe.contentDocument.querySelector(".prolific-id");
-                userID = userID.innerText;
-                localStorage.setItem("userID", userID);
-                getMaxPages(userID);
-                resolve(userID);
-                console.log("userID function returns " + userID);
-                removeFrames()
+                let userIDField = accountIframe.contentDocument.querySelector("[data-testid='field-prolific-id']");
+                let userID = userIDField.querySelector(".value");
+                if(userID) {
+                    userID = userID.innerText;
+                    localStorage.setItem("userID", userID);
+                    getMaxPages(userID);
+                    resolve(userID);
+                    console.log("userID function returns " + userID);
+                    removeFrames();
+                } else {
+                    reject("Could not find user ID");
+                }
             }, getUserIDTimeout);
         });
     } catch (error) {
@@ -296,7 +301,6 @@ async function getUserID() {
             getUserIDRetries++;
             getUserIDTimeout += 10000;
             getUserID(getUserIDTimeout)
-
         }else{
             console.error(error);
             console.log("error in getUserId: " + error);
@@ -308,6 +312,8 @@ async function getUserID() {
 
 
 
+
+
 function accountFrame() {
     if (!running) {
         removeFrames();
@@ -315,7 +321,7 @@ function accountFrame() {
     }
     let accountIframe = document.createElement("iframe");
     accountIframe.src = "https://app.prolific.co/account/General";
-    accountIframe.style.display = "none";
+    //accountIframe.style.display = "none";
     accountIframe.id = "accountFrame";
     let summaryDiv = document.querySelector(".has-indicator");
     summaryDiv.appendChild(accountIframe);
@@ -334,48 +340,50 @@ async function getMaxPages(userID) {
         var maxPagesRetryCount = 0;
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                let topPage = maxPagesIframe.contentDocument.querySelectorAll(
-                    "a.page-link"
-                );
-                if(topPage){
-                    if (topPage.length < 12) {
-                        reject(
-                            "Uhoh, you have less than 12 pages of submission history." //TODO
-                        );
-                        running=false
-                        removeFrames()
-                        return
-                    }}
-                let maxPages1 = topPage[12].innerText;
-                const maxPages = maxPages1 / 5;
-                const maxPagesRounded = Math.ceil(maxPages1 / 5);
-                let timeEstimate = Math.round((maxPages * 19) / 60);
-                console.log(`
---------------------------------------------------------------------------
-This program fetches your submission history in batches of 100.
-${maxPages1} pages will be fetched with ${maxPagesRounded} requests and it will take about ${timeEstimate} minutes.
---------------------------------------------------------------------------
-                `);
-                tokenLogic(maxPages1);
-                resolve(maxPages1);
-                console.log("maxPages function returns maxPages" + maxPages1);
+                let pagination = maxPagesIframe.contentDocument.querySelector("ul.pagination");
+                if (pagination){
+                    let pageLinks = pagination.querySelectorAll("a.page-link");
+                    if (pageLinks && pageLinks.length >= 2) { // includes the "Prev" and "Next" buttons
+                        let maxPages1 = pageLinks[pageLinks.length - 2].innerText; // second last link is the last page number
+                        const maxPages = maxPages1 / 5;
+                        const maxPagesRounded = Math.ceil(maxPages1 / 5);
+                        let timeEstimate = Math.round((maxPages * 19) / 60);
+                        console.log(`
+                        --------------------------------------------------------------------------
+                        This program fetches your submission history in batches of 100.
+                        ${maxPages1} pages will be fetched with ${maxPagesRounded} requests and it will take about ${timeEstimate} minutes.
+                        --------------------------------------------------------------------------
+                        `);
+                        tokenLogic(maxPages1);
+                        resolve(maxPages1);
+                        console.log("maxPages function returns maxPages" + maxPages1);
+                    } else {
+                        reject("Uhoh, you have less than 2 pages of submission history."); //TODO
+                        running = false;
+                        removeFrames();
+                        return;
+                    }
+                } else {
+                    reject("Could not find pagination.");
+                }
             }, maxPagesTimeOut);
         }).catch((error) => {
             if (maxPagesRetryCount < 3) {
                 maxPagesRetryCount++;
                 maxPagesTimeOut += 10000;
                 return getMaxPages(userID);
-            }else{
+            } else {
                 console.error(error);
                 console.log("maxPagesFrame error: " + error);
-                running=false;
+                running = false;
                 removeFrames();
                 return;
-            }});
+            }
+        });
     } catch (error) {
         console.error(error);
         console.log("other maxPages error: " + error);
-        running=false;
+        running = false;
         removeFrames();
         return;
     }
